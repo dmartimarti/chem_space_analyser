@@ -1,64 +1,78 @@
 # Chemical space analysis
 Generating multidimensional analyses of chemical compounds with ease
 
-This script is designed to generate a multidimensional analysis of chemical compounds. It is based on the RDKit library and uses the functional groups from the _Fragments_ library in RDKit to generate a multidimensional representation of the chemical space. The script will read a csv file with 2 columns: the first column is the SMILES representation of the compound and the second column is metadata from the compound. The script will generate a multidimensional representation of the chemical space and will generate a t-SNE plot of the chemical space. 
+This script is designed to generate a multidimensional analysis of chemical compounds. It is based on the RDKit library and allows for multiple featurization methods and clustering algorithms to explore the chemical space.
 
-The input must be a csv file with three columns where the first **must** be named as `smiles` and the second **must** be named `name`. The third one can change or can be empty, **but the file should have 3 columns**. It should have the following format:
+The script will read a csv file, generate features for each molecule, perform dimensionality reduction (t-SNE or UMAP), and optionally cluster the results.
 
-```
-smiles, name, metadata
-CC(C)(CN(CC1)CCC1NCc1nc([nH]cc2)c2cc1)O, name_1, active
-CN(C)C1CCN(CCCNc2c3[s]c(N(C)C)nc3ncn2)CC1, name_2, active
-CCCN1CC(CNC(NC(CN(C)C2)c3c2cccc3)=O)CC1, name_3, inactive
-...
-``` 
+## Input Data
 
-There is an example of a csv file with the right format.
-git push --mirror mirror
-It will create a folder where it will save these output files:
-- functional_groups.csv: a csv file with the functional groups of the compounds
-- tsne_results.csv: a csv file with the t-SNE coordinates of the compounds
-- tsne_plot.html: a html file with the t-SNE plot of the compounds
+The input **must be** a csv file with three columns where the first **must** be named as `smiles` and the second **must** be named `name`. The third one can contain any metadata and will be used for coloring the plots (unless clustering is enabled). The file should have the following format:
 
-You need to install these dependencies:
+`smiles,name,metadata
+CC(C)(CN(CC1)CCC1NCc1nc([nH]cc2)c2cc1)O,name_1,active
+CN(C)C1CCN(CCCNc2c3[s]c(N(C)C)nc3ncn2)CC1,name_2,active
+CCCN1CC(CNC(NC(CN(C)C2)c3c2cccc3)=O)CC1,name_3,inactive
+...`
 
-```bash
-pip install rdkit
+An example input file `example_data.csv` is provided.
 
-conda install plotly pandas scikit-learn
-```
+## Output Files
 
-Usage:
+The script will create an output folder containing the following files:
+- `features.csv`: A CSV file with the calculated features for each compound (e.g., functional groups, fingerprints, or physicochemical properties).
+- `tsne_results_perplexity_...csv`: A CSV file with the t-SNE coordinates. If clustering is performed, this file will include a `cluster` column and will be named `..._clustered.csv`.
+- `umap_results_...csv`: A CSV file with the UMAP coordinates. If clustering is performed, this file will include a `cluster` column and will be named `..._clustered.csv`.
+- `tsne_plot.html`: An interactive 3D HTML plot of the t-SNE results.
+- `umap_plot.html`: An interactive 3D HTML plot of the UMAP results (if `--umap` is used).
 
-```bash 
+## Dependencies
 
-python chem_spacer.py -i input.csv -o output_folder
+You need to install these dependencies. We recommend using a Conda environment.
 
-```
+`pip install rdkit hdbscan
+conda install plotly pandas scikit-learn tqdm`
 
-Besides these required parameters, you can also set the following optional parameters:
+## Usage
 
-```
-- `--threads`: the number of threads to use. Default is 1.
-- `--perplexity`: the perplexity of the t-SNE algorithm. Default is 30.
-- `--iterations`: the number of iterations of the t-SNE algorithm. Default is 1000.
-- `--perplexity_grid`: it will bypass the `--perplexity` parameter and will run the t-SNE algorithm with 
-a grid of perplexities ([5, 10, 20, 30, 40, 50]). Default is False. This option takes a while to compute.
-- `--umap`: it will calculate the UMAP coordinates of the compounds with default parameters (n_neighbors=15, min_dist=0.1). 
-Default is False.
-```
+Basic usage:
 
-An example of usage where it computes a t-SNE with perplexity of 30, max_iter of 500, and a UMAP analysis with 8 threads is shown below:
+`python chem_spacer.py -i input.csv -o output_folder`
 
-```bash
-python chem_spacer.py -i ./data/data_table.csv -o results -n 500 -t 8 -u 
-```
+### Optional Parameters
 
-TODO:
+Besides the required input and output, you can also set the following optional parameters:
+
+- `--threads`: The number of threads to use. Default is 1.
+- `--featurizer`: The type of molecular features to calculate. Default is `fragments`.
+  - `fragments`: Counts of RDKit functional groups.
+  - `morgan` or `ecfp`: Morgan/ECFP circular fingerprints (2048 bits, radius 2).
+  - `physchem`: A panel of physicochemical properties (MolWt, LogP, TPSA, etc.).
+- `--perplexity`: The perplexity of the t-SNE algorithm. Default is 30.
+- `--iterations`: The number of iterations of the t-SNE algorithm. Default is 1000.
+- `--perplexity_grid`: Bypass the `--perplexity` parameter and run t-SNE with a grid of perplexities ([5, 10, 20, 30, 40, 50]). Default is False.
+- `--umap`: Calculate UMAP coordinates in addition to t-SNE. Default is False.
+- `--cluster_method`: The clustering algorithm to apply to the dimensionality reduction results. No clustering is performed by default.
+  - `kmeans`: K-Means clustering.
+  - `dbscan`: DBSCAN clustering.
+  - `hdbscan`: HDBSCAN clustering.
+- `--n_clusters`: The number of clusters to use for K-Means. Default is 5.
+
+
+### Advanced Example
+
+An example of a more advanced usage is shown below. This command will:
+- Use the `morgan` featurizer.
+- Compute both t-SNE and UMAP.
+- Apply `hdbscan` clustering to the results.
+- Use 8 threads for computation.
+
+`python chem_spacer.py -i example_data.csv -o results --featurizer morgan --umap --cluster_method hdbscan -t 8`
+
+## TODO:
 - [x] Add UMAP support
-- [ ] Add the option to use the Morgan fingerprints
-- [ ] Add the option to use the ECFP fingerprints
+- [x] Add the option to use the Morgan fingerprints
+- [x] Add the option to use the ECFP fingerprints
 - [x] Support for Drug names
-
-
-Any feedback is welcome!
+- [ ] Add options to customize fingerprint parameters (e.g., radius, nBits).
+- [ ] Add options to customize clustering parameters (e.g., eps for DBSCAN).
